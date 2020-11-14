@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <RootNamespace>X_Server</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Binaries\**" />
+    <Compile Remove="Core\**" />
+    <Content Remove="Binaries\**" />
+    <Content Remove="Core\**" />
+    <EmbeddedResource Remove="Binaries\**" />
+    <EmbeddedResource Remove="Core\**" />
+    <None Remove="Binaries\**" />
+    <None Remove="Core\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ApplicationManager\ApplicationManager.csproj" />
+  </ItemGroup>
+
+</Project>

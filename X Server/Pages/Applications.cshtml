@@ -1,0 +1,27 @@
+﻿@page
+@model X_Server.Pages.ApplicationsModel
+@{
+    ViewData["Title"] = "Applications";
+    Layout = "~/Pages/Shared/_Layout.cshtml";
+}
+
+<h1>Applications</h1>
+
+<ul>
+    @foreach (var application in Model.Applications)
+    {
+        <li>
+            <strong>@application.Name</strong>
+            <form method="post">
+                @if (application.Installed)
+                {
+                    <button asp-page-handler="uninstall" asp-route-name="@application.Name" type="submit">Uninstall</button>
+                }
+                else
+                {
+                    <button asp-page-handler="install" asp-route-name="@application.Name" type="submit">Install</button>
+                }
+            </form>
+        </li>
+    }
+</ul>
