@@ -65,6 +65,11 @@ namespace ApplicationManager.Hasher
         /// <returns></returns>
         internal bool Validate(Stream stream)
         {
+            if (!stream.CanSeek)
+            {
+                throw new InvalidStreamTypeException("Cannot validate the stream because of not allowed 'seek' method.");
+            }
+
             var hash = _algorithm.ComputeHash(stream);
             if (hash.Length != _expectedHash.Length)
             {

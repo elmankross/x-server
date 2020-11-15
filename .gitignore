@@ -31,3 +31,4 @@ _ReSharper*/
 #Nuget packages folder
 packages/
 /X Server/Binaries
+/X Server/Logs

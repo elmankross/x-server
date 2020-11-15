@@ -5,23 +5,47 @@
     Layout = "~/Pages/Shared/_Layout.cshtml";
 }
 
-<h1>Applications</h1>
-
-<ul>
-    @foreach (var application in Model.Applications)
-    {
-        <li>
-            <strong>@application.Name</strong>
-            <form method="post">
-                @if (application.Installed)
-                {
-                    <button asp-page-handler="uninstall" asp-route-name="@application.Name" type="submit">Uninstall</button>
-                }
-                else
-                {
-                    <button asp-page-handler="install" asp-route-name="@application.Name" type="submit">Install</button>
-                }
-            </form>
-        </li>
-    }
-</ul>
+<table class="table">
+    <thead class="thead-dark">
+        <tr>
+            <th scope="col">Application</th>
+            <th scope="col">Version</th>
+            <th scope="col">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var app in Model.Applications)
+        {
+            <tr>
+                <td>@app.Name</td>
+                <td>@app.Version</td>
+                <td>
+                    <form method="post">
+                        @switch (app.Status)
+                        {
+                            case ApplicationManager.Storage.Models.Status.Installed:
+                                <button type="submit"
+                                        class="btn btn-danger btn-sm"
+                                        asp-page-handler="uninstall"
+                                        asp-route-name="@app.Name">
+                                    Uninstall
+                                </button>
+                                break;
+                            case ApplicationManager.Storage.Models.Status.Installing:
+                                <span>Installing...</span>
+                                break;
+                            case ApplicationManager.Storage.Models.Status.NotInstalled:
+                                <button type="submit"
+                                        class="btn btn-primary btn-sm"
+                                        asp-page-handler="install"
+                                        asp-route-name="@app.Name">
+                                    Install
+                                </button>
+                                break;
+                        }
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

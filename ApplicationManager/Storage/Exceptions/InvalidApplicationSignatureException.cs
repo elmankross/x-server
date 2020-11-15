@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ApplicationManager.Downloader.Exceptions
+namespace ApplicationManager.Storage.Exceptions
 {
     public class InvalidApplicationSignatureException : Exception
     {

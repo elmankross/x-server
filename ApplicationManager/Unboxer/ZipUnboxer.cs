@@ -17,6 +17,7 @@ namespace ApplicationManager.Unboxer
 
                 if (string.IsNullOrEmpty(entry.Name))
                 {
+                    // remove root directory
                     if (i == 0)
                     {
                         var nextEntry = archive.Entries[i + 1];

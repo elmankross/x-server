@@ -40,20 +40,20 @@ namespace X_Server.Pages
         /// <summary>
         /// 
         /// </summary>
-        public async Task OnPostInstallAsync(string name)
+        public async Task<IActionResult> OnPostInstallAsync(string name)
         {
             await _storage.InstallAsync(name);
-            Applications = _storage.GetApplications();
+            return RedirectToPage();
         }
 
 
         /// <summary>
         /// 
         /// </summary>
-        public async Task OnPostUninstallAsync(string name)
+        public async Task<IActionResult> OnPostUninstallAsync(string name)
         {
             await _storage.UninstallAsync(name);
-            Applications = _storage.GetApplications();
+            return RedirectToPage();
         }
     }
 }

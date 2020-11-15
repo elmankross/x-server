@@ -1,9 +1,8 @@
-﻿using ApplicationManager.Downloader.Models;
-using System.IO;
+﻿using System.IO;
 
 namespace ApplicationManager.Unboxer.Models
 {
-    public class UnboxedFileInfo : IFileInfo
+    public class UnboxedFileInfo
     {
         public string FullName { get; }
         public Stream Stream { get; }

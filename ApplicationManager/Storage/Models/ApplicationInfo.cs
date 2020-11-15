@@ -1,8 +1,27 @@
-﻿namespace ApplicationManager.Storage.Models
+﻿using System.Text.Json.Serialization;
+
+namespace ApplicationManager.Storage.Models
 {
-    public class ApplicationInfo
+    public class ApplicationInfo : Downloader.Models.ApplicationInfo
     {
-        public string Name { get; internal set; }
-        public bool Installed { get; internal set; }
+        [JsonInclude]
+        public Status Status { get; internal set; }
+
+        [JsonConstructor]
+        internal ApplicationInfo()
+        {
+        }
+
+        internal ApplicationInfo(Downloader.Models.ApplicationInfo source)
+            : base(source)
+        {
+        }
+    }
+
+    public enum Status
+    {
+        NotInstalled,
+        Installed,
+        Installing
     }
 }
