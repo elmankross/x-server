@@ -2,7 +2,7 @@
 
 namespace ApplicationManager.Downloader.Models
 {
-    public class ApplicationInfo
+    public class ApplicationInfo : IDisplayable
     {
         public string Name { get; set; }
         public string Version { get; set; }
@@ -12,7 +12,7 @@ namespace ApplicationManager.Downloader.Models
         {
         }
 
-        internal ApplicationInfo(ApplicationInfo source)
+        internal ApplicationInfo(IDisplayable source)
         {
             Name = source.Name;
             Version = source.Version;

@@ -32,7 +32,7 @@ namespace ApplicationManager.Downloader
         /// </summary>
         /// <param name="name"></param>
         /// <returns></returns>
-        public ApplicationInfo GetAppByName(string name) => _applications.Dictionary[name];
+        public IApplication GetAppByName(string name) => _applications.Dictionary[name];
 
         /// <summary>
         /// 

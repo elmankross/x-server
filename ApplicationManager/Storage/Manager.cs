@@ -18,6 +18,7 @@ namespace ApplicationManager.Storage
         private readonly Configuration _configuration;
         private readonly Downloader.Manager _downloader;
         private readonly Tasker.Manager _tasker;
+        private readonly Executor.Manager _executor;
         private readonly ConcurrentDictionary<string, Guid> _applicationTasks;
 
 
@@ -30,11 +31,13 @@ namespace ApplicationManager.Storage
             IOptions<Configuration> configuration,
             ILogger<Manager> logger,
             Downloader.Manager downloader,
+            Executor.Manager executor,
             Tasker.Manager tasker)
         {
             _configuration = configuration.Value;
             _locker = new Locker(_configuration.BaseDirectoryInfo);
             _logger = logger;
+            _executor = executor;
             _downloader = downloader;
             _applicationTasks = new ConcurrentDictionary<string, Guid>();
             _tasker = tasker;
@@ -53,7 +56,10 @@ namespace ApplicationManager.Storage
             {
                 if (appTask.Value == e)
                 {
-                    _applicationTasks.TryRemove(appTask.Key, out var _);
+                    if (!_applicationTasks.TryRemove(appTask.Key, out var _))
+                    {
+                        _logger.LogWarning("Can't obtaining task's information from concurrent dictionary. Ignoring it...");
+                    }
                 }
             }
         }
@@ -72,7 +78,10 @@ namespace ApplicationManager.Storage
                         from set in g.DefaultIfEmpty()
                         select new ApplicationInfo(a)
                         {
-                            Status = g.SingleOrDefault().Value?.Status ?? Status.NotInstalled
+                            ExecutionState = _applicationTasks.ContainsKey(a.Name)
+                            ? ExecutionState.Executing
+                            : ExecutionState.NotExecuted,
+                            InstallationState = g.SingleOrDefault().Value?.InstallationState ?? InstallationState.NotInstalled
                         };
             return query.ToArray();
         }
@@ -84,11 +93,13 @@ namespace ApplicationManager.Storage
         /// <param name="applicationName"></param>
         public async Task InstallAsync(string applicationName)
         {
-            var id = await _tasker.StartAsync(InstallTaskAsync(applicationName));
-            _applicationTasks.TryAdd(applicationName, id);
-            _logger.LogDebug("Locking installing app...");
-            await _locker.LockAsync(id, _downloader.GetAppByName(applicationName), Status.Installing);
-            _logger.LogDebug("Locked!");
+            var taskId = await _tasker.StartAsync(() => InstallTaskAsync(applicationName));
+            using (_logger.BeginScope(new { taskId }))
+            {
+                _logger.LogDebug("Locking installing app...");
+                await _locker.LockAsync(taskId, _downloader.GetAppByName(applicationName), InstallationState.Installing);
+                _logger.LogDebug("Locked!");
+            }
         }
 
 
@@ -150,7 +161,7 @@ namespace ApplicationManager.Storage
                     }
 
                     _logger.LogDebug("Locking installed app...");
-                    await _locker.LockAsync(id, _downloader.GetAppByName(applicationName), Status.Installed);
+                    await _locker.LockAsync(id, _downloader.GetAppByName(applicationName), InstallationState.Installed);
                     _logger.LogDebug("Locked!");
 
                     _logger.LogDebug("Deleting temp file...");
@@ -178,6 +189,34 @@ namespace ApplicationManager.Storage
                 Directory.Delete(path, true);
 
                 _logger.LogDebug("Done!");
+            }
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="applicationName"></param>
+        /// <returns></returns>
+        public async Task RunAsync(string applicationName)
+        {
+            var application = _downloader.GetAppByName(applicationName);
+            application.BaseDirectory = Path.Combine(_configuration.BaseDirectoryInfo.FullName, applicationName);
+            var id = await _executor.ExecuteAsync(application);
+            _applicationTasks.TryAdd(applicationName, id);
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="applicatioName"></param>
+        /// <returns></returns>
+        public async Task TerminateAsync(string applicatioName)
+        {
+            if (_applicationTasks.TryGetValue(applicatioName, out var taskId))
+            {
+                await _executor.TerminateAsync(taskId);
             }
         }
     }

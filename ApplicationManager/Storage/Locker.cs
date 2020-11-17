@@ -44,12 +44,12 @@ namespace ApplicationManager.Storage
         /// 
         /// </summary>
         /// <returns></returns>
-        internal async Task LockAsync(Guid id, Downloader.Models.ApplicationInfo info, Status status)
+        internal async Task LockAsync(Guid id, Downloader.Models.IDisplayable info, InstallationState state)
         {
             Applications.AddOrUpdate(info.Name, _ => new ApplicationLock(id, info)
             {
-                Status = status
-            }, (_, item) => { item.Status = status; return item; });
+                InstallationState = state
+            }, (_, item) => { item.InstallationState = state; return item; });
 
             await WriteAsync();
         }
@@ -60,7 +60,7 @@ namespace ApplicationManager.Storage
         /// </summary>
         /// <param name="info"></param>
         /// <returns></returns>
-        internal async Task DeleteAsync(Downloader.Models.ApplicationInfo info)
+        internal async Task DeleteAsync(Downloader.Models.IDisplayable info)
         {
             if (Applications.TryRemove(info.Name, out var _))
             {

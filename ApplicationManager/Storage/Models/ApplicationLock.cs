@@ -58,6 +58,7 @@ namespace ApplicationManager.Storage.Models
     {
         [JsonInclude]
         public Guid Id { get; private set; }
+
         [JsonInclude]
         public DateTime CreatedAt { get; private set; }
 
@@ -66,7 +67,7 @@ namespace ApplicationManager.Storage.Models
         {
         }
 
-        internal ApplicationLock(Guid id, Downloader.Models.ApplicationInfo source)
+        internal ApplicationLock(Guid id, Downloader.Models.IDisplayable source)
             : base(source)
         {
             Id = id;

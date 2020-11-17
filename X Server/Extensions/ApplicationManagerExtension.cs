@@ -12,6 +12,7 @@ namespace X_Server.Extensions
 
             services.AddSingleton<ApplicationManager.Tasker.Manager>();
             services.AddSingleton<ApplicationManager.Downloader.Manager>();
+            services.AddSingleton<ApplicationManager.Executor.Manager>();
             services.AddSingleton<ApplicationManager.Storage.Manager>();
         }
     }

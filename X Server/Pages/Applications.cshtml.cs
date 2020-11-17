@@ -55,5 +55,24 @@ namespace X_Server.Pages
             await _storage.UninstallAsync(name);
             return RedirectToPage();
         }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public async Task<IActionResult> OnPostRunAsync(string name)
+        {
+            await _storage.RunAsync(name);
+            return RedirectToPage();
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public async Task<IActionResult> OnPostTerminateAsync(string name)
+        {
+            await _storage.TerminateAsync(name);
+            return RedirectToPage();
+        }
     }
 }

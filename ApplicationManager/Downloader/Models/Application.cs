@@ -22,14 +22,17 @@ namespace ApplicationManager.Downloader.Models
     /// <summary>
     /// Describe information about application
     /// </summary>
-    public class Application : ApplicationInfo
+    public class Application : ApplicationInfo, IApplication
     {
         public Bitness Bitness { get; set; }
         public string Hash { get; set; }
         public Uri Url { get; set; }
-        public string Exec { get; set; }
-        public Check Check { get; set; }
         public string[] Dependencies { get; set; }
+        public ApplicationExec Exec { get; set; }
+        public Check Check { get; set; }
+
+        [JsonIgnore]
+        public string BaseDirectory { get; set; }
 
         [JsonConstructor]
         public Application()

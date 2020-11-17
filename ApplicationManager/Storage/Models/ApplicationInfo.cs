@@ -5,23 +5,33 @@ namespace ApplicationManager.Storage.Models
     public class ApplicationInfo : Downloader.Models.ApplicationInfo
     {
         [JsonInclude]
-        public Status Status { get; internal set; }
+        public InstallationState InstallationState { get; internal set; }
+
+        [JsonInclude]
+        public ExecutionState ExecutionState { get; internal set; }
 
         [JsonConstructor]
         internal ApplicationInfo()
         {
         }
 
-        internal ApplicationInfo(Downloader.Models.ApplicationInfo source)
+        internal ApplicationInfo(Downloader.Models.IDisplayable source)
             : base(source)
         {
         }
     }
 
-    public enum Status
+    public enum InstallationState
     {
         NotInstalled,
         Installed,
         Installing
+    }
+
+    public enum ExecutionState
+    {
+        NotExecuted,
+        Executing,
+        Erorred
     }
 }
