@@ -1,8 +1,8 @@
-﻿using ApplicationManager.Storage.Exceptions;
+﻿using ApplicationManager.Identifier.Models;
+using ApplicationManager.Storage.Exceptions;
 using ApplicationManager.Storage.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -19,7 +19,8 @@ namespace ApplicationManager.Storage
         private readonly Downloader.Manager _downloader;
         private readonly Tasker.Manager _tasker;
         private readonly Executor.Manager _executor;
-        private readonly ConcurrentDictionary<string, Guid> _applicationTasks;
+        private readonly Identifier _identifier;
+        private readonly ApplicationTasks _applicationTasks;
 
 
         /// <summary>
@@ -39,29 +40,10 @@ namespace ApplicationManager.Storage
             _logger = logger;
             _executor = executor;
             _downloader = downloader;
-            _applicationTasks = new ConcurrentDictionary<string, Guid>();
+            _applicationTasks = new ApplicationTasks();
             _tasker = tasker;
-            _tasker.Done += Tasker_Done;
-        }
-
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="_"></param>
-        /// <param name="e"></param>
-        private void Tasker_Done(object _, Guid e)
-        {
-            foreach (var appTask in _applicationTasks)
-            {
-                if (appTask.Value == e)
-                {
-                    if (!_applicationTasks.TryRemove(appTask.Key, out var _))
-                    {
-                        _logger.LogWarning("Can't obtaining task's information from concurrent dictionary. Ignoring it...");
-                    }
-                }
-            }
+            _identifier = new Identifier();
+            _tasker.Done += OnTasker_Done;
         }
 
 
@@ -93,12 +75,15 @@ namespace ApplicationManager.Storage
         /// <param name="applicationName"></param>
         public async Task InstallAsync(string applicationName)
         {
-            var taskId = await _tasker.StartAsync(() => InstallTaskAsync(applicationName));
-            using (_logger.BeginScope(new { taskId }))
+            using (_logger.BeginScope(new { applicationName }))
             {
-                _logger.LogDebug("Locking installing app...");
-                await _locker.LockAsync(taskId, _downloader.GetAppByName(applicationName), InstallationState.Installing);
-                _logger.LogDebug("Locked!");
+                var id = await _tasker.StartAsync(() => InstallTaskAsync(applicationName));
+                using (_logger.BeginScope(id))
+                {
+                    _logger.LogDebug("Locking installing app...");
+                    await _locker.LockAsync(id, _downloader.GetAppByName(applicationName), InstallationState.Installing);
+                    _logger.LogDebug("Locked!");
+                }
             }
         }
 
@@ -111,14 +96,14 @@ namespace ApplicationManager.Storage
         /// <returns></returns>
         private async Task InstallTaskAsync(string applicationName)
         {
-            var id = Guid.NewGuid();
+            var id = _identifier.GetNext(e => e.Install);
             using (_logger.BeginScope(new { applicationName, id }))
             {
                 _logger.LogDebug("Downloading files...");
 
                 var baseDir = _configuration.BaseDirectoryInfo;
                 var app = await _downloader.DownloadAsync(applicationName);
-                var tempName = id.ToString("N") + ".tmp";
+                var tempName = id.Number.ToString("N") + ".tmp";
                 var tempFullName = Path.Combine(baseDir.FullName, tempName);
                 using (var temp = File.OpenWrite(tempFullName))
                 {
@@ -181,7 +166,7 @@ namespace ApplicationManager.Storage
         {
             var baseDirectoryPath = _configuration.BaseDirectoryInfo.FullName;
             var path = Path.Combine(baseDirectoryPath, applicationName);
-            using (_logger.BeginScope(path))
+            using (_logger.BeginScope(new { path }))
             {
                 _logger.LogDebug("Deleting the directory...");
 
@@ -200,10 +185,14 @@ namespace ApplicationManager.Storage
         /// <returns></returns>
         public async Task RunAsync(string applicationName)
         {
-            var application = _downloader.GetAppByName(applicationName);
-            application.BaseDirectory = Path.Combine(_configuration.BaseDirectoryInfo.FullName, applicationName);
-            var id = await _executor.ExecuteAsync(application);
-            _applicationTasks.TryAdd(applicationName, id);
+            using (_logger.BeginScope(new { applicationName }))
+            {
+                var application = _downloader.GetAppByName(applicationName);
+                application.BaseDirectory = Path.Combine(_configuration.BaseDirectoryInfo.FullName, applicationName);
+                var id = await _executor.ExecuteAsync(application);
+                id.NewChildren += OnId_NewChild;
+                _applicationTasks.AddOrInsert(applicationName, () => id);
+            }
         }
 
 
@@ -214,9 +203,63 @@ namespace ApplicationManager.Storage
         /// <returns></returns>
         public async Task TerminateAsync(string applicatioName)
         {
-            if (_applicationTasks.TryGetValue(applicatioName, out var taskId))
+            using (_logger.BeginScope(new { applicatioName }))
             {
-                await _executor.TerminateAsync(taskId);
+                if (_applicationTasks.TryGetApplicationEvent(applicatioName, Executor.Identifier.Events.ExecuteMain, out var taskId))
+                {
+                    var innerId = taskId.Childs.Single(x => x.Type == Tasker.Identifier.Events.Start);
+                    await _executor.TerminateAsync(innerId);
+                }
+                else
+                {
+                    _logger.LogWarning("There is no information about terminationg application. Ignoring it...");
+                }
+            }
+        }
+
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <param name="childId"></param>
+        private void OnId_NewChild(object parent, Identity childId)
+        {
+            if (childId.Type == Executor.Identifier.Events.ExecuteMain)
+            {
+                if (parent is Identity parentId)
+                {
+                    var application = _applicationTasks.TaskApplications[parentId];
+                    _applicationTasks.AddOrInsert(application, () => childId);
+                    parentId.NewChildren -= OnId_NewChild;
+                }
+            }
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="_"></param>
+        /// <param name="id"></param>
+        private void OnTasker_Done(object _, Identity id)
+        {
+            if (_applicationTasks.TaskApplications.ContainsKey(id))
+            {
+                var application = _applicationTasks.TaskApplications[id];
+                if (_applicationTasks.TryRemoveApplicationEvent(application, Executor.Identifier.Events.ExecuteMain))
+                {
+                    _logger.LogDebug("Information about running application was been removed.");
+                }
+                else
+                {
+                    _logger.LogWarning("Can't obtaining task's information from concurrent dictionary. Ignoring it...");
+                }
+            }
+            else
+            {
+                _logger.LogWarning("Can't obtaining task's information from concurrent dictionary. Ignoring it...");
             }
         }
     }

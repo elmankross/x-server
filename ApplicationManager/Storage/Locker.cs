@@ -1,4 +1,5 @@
-﻿using ApplicationManager.Storage.Models;
+﻿using ApplicationManager.Identifier.Models;
+using ApplicationManager.Storage.Models;
 using System;
 using System.IO;
 using System.Text.Json;
@@ -44,9 +45,9 @@ namespace ApplicationManager.Storage
         /// 
         /// </summary>
         /// <returns></returns>
-        internal async Task LockAsync(Guid id, Downloader.Models.IDisplayable info, InstallationState state)
+        internal async Task LockAsync(Identity id, Downloader.Models.IDisplayable info, InstallationState state)
         {
-            Applications.AddOrUpdate(info.Name, _ => new ApplicationLock(id, info)
+            Applications.AddOrUpdate(info.Name, _ => new ApplicationLock(id.Number, info)
             {
                 InstallationState = state
             }, (_, item) => { item.InstallationState = state; return item; });

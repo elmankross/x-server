@@ -1,10 +1,85 @@
 ﻿@page
-@model IndexModel
+@model X_Server.Pages.ApplicationsModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Applications";
+    Layout = "~/Pages/Shared/_Layout.cshtml";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://docs.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<table class="table">
+    <thead class="thead-dark">
+        <tr>
+            <th scope="col">Application</th>
+            <th scope="col">Version</th>
+            <th scope="col">Installation</th>
+            <th scope="col">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var app in Model.Applications)
+        {
+            <tr>
+                <td>@app.Name</td>
+                <td>@app.Version</td>
+                <td>
+                    <form method="post">
+                        @switch (app.InstallationState)
+                        {
+                            case ApplicationManager.Storage.Models.InstallationState.Installed:
+                                <button type="submit"
+                                        class="btn btn-danger btn-sm"
+                                        asp-page-handler="uninstall"
+                                        asp-route-name="@app.Name">
+                                    Uninstall
+                                </button>
+                                break;
+                            case ApplicationManager.Storage.Models.InstallationState.Installing:
+                                <span>Installing...</span>
+                                break;
+                            case ApplicationManager.Storage.Models.InstallationState.NotInstalled:
+                                <button type="submit"
+                                        class="btn btn-primary btn-sm"
+                                        asp-page-handler="install"
+                                        asp-route-name="@app.Name">
+                                    Install
+                                </button>
+                                break;
+                        }
+                    </form>
+                </td>
+                <td>
+                    <form method="post">
+                        @if (app.InstallationState == ApplicationManager.Storage.Models.InstallationState.Installed)
+                        {
+                            @switch (app.ExecutionState)
+                            {
+                                case ApplicationManager.Storage.Models.ExecutionState.NotExecuted:
+                                    <button type="submit"
+                                            class="btn btn-primary btn-sm"
+                                            asp-page-handler="run"
+                                            asp-route-name="@app.Name">
+                                        Run
+                                    </button>
+                                    break;
+                                case ApplicationManager.Storage.Models.ExecutionState.Executing:
+                                    <button type="submit"
+                                            class="btn btn-danger btn-sm"
+                                            asp-page-handler="terminate"
+                                            asp-route-name="@app.Name">
+                                        Terminate
+                                    </button>
+                                    break;
+                                case ApplicationManager.Storage.Models.ExecutionState.Erorred:
+                                    <span>Errored. Check the log.</span>
+                                    break;
+                            }
+                        }
+                        else
+                        {
+                            <span>-</span>
+                        }
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using ApplicationManager.Identifier.Models;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -11,6 +12,7 @@ namespace ApplicationManager.Executor
     public class Manager
     {
         private readonly ILogger _logger;
+        private readonly Identifier _identifier;
         private readonly Tasker.Manager _tasker;
 
 
@@ -23,6 +25,7 @@ namespace ApplicationManager.Executor
         {
             _logger = logger;
             _tasker = tasker;
+            _identifier = new Identifier();
         }
 
 
@@ -31,20 +34,28 @@ namespace ApplicationManager.Executor
         /// </summary>
         /// <param name="executable"></param>
         /// <returns></returns>
-        public Task<Guid> ExecuteAsync(Downloader.Models.IExecutable executable)
+        public Task<Identity> ExecuteAsync(Downloader.Models.IExecutable executable)
         {
+            var before = executable.Exec.Hooks?.Before != null
+                ? GetProcessInfo(executable.BaseDirectory, executable.Exec.Hooks.Before)
+                : null;
+            var after = executable.Exec.Hooks?.After != null
+                ? GetProcessInfo(executable.BaseDirectory, executable.Exec.Hooks.After)
+                : null;
+            var main = GetProcessInfo(executable.BaseDirectory, executable.Exec);
+
             if (executable.Exec.Hooks?.Before != null)
             {
-                var beforeHook = GetProcessInfo(executable.BaseDirectory, executable.Exec.Hooks.Before);
-                return StartTaskAsync(beforeHook,
-                    () => GetProcessInfo(executable.BaseDirectory, executable.Exec),
-                    () => GetProcessInfo(executable.BaseDirectory, executable.Exec.Hooks?.After));
+                return StartTaskAsync(
+                    () => (_identifier.GetNext(e => e.ExecuteHookBefore), before),
+                    () => (_identifier.GetNext(e => e.ExecuteMain), main),
+                    () => (_identifier.GetNext(e => e.ExecuteHookAfter), after));
             }
             else
             {
-                var main = GetProcessInfo(executable.BaseDirectory, executable.Exec);
-                return StartTaskAsync(main,
-                    () => GetProcessInfo(executable.BaseDirectory, executable.Exec.Hooks?.After),
+                return StartTaskAsync(
+                    () => (_identifier.GetNext(e => e.ExecuteMain), main),
+                    () => (_identifier.GetNext(e => e.ExecuteHookAfter), after),
                     null);
             }
         }
@@ -55,7 +66,7 @@ namespace ApplicationManager.Executor
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        public Task TerminateAsync(Guid id)
+        public Task TerminateAsync(Identity id)
         {
             return _tasker.StopAsync(id);
         }
@@ -66,16 +77,25 @@ namespace ApplicationManager.Executor
         /// </summary>
         /// <param name="process"></param>
         /// <returns></returns>
-        private Task<Guid> StartTaskAsync(ProcessStartInfo before, Func<ProcessStartInfo> main, Func<ProcessStartInfo> after)
+        private async Task<Identity> StartTaskAsync(
+            Func<(Identity, ProcessStartInfo)> before,
+            Func<(Identity, ProcessStartInfo)> current,
+            Func<(Identity, ProcessStartInfo)> after)
         {
+            var (id, info) = before();
+            if (info == null)
+            {
+                return default;
+            }
+
             _logger.LogDebug("Starting new process...");
-            var mainProcess = Process.Start(before);
+            var mainProcess = Process.Start(info);
             _logger.LogDebug("Process was been started.");
 
             var token = new CancellationTokenSource();
-            token.Token.Register(() => mainProcess.Kill());
+            token.Token.Register(() => KillProcess(mainProcess));
 
-            return _tasker.StartAsync(async () =>
+            var taskId = await _tasker.StartAsync(async () =>
             {
                 mainProcess.ErrorDataReceived += Process_ErrorDataReceived;
                 mainProcess.Exited += Process_Exited;
@@ -95,14 +115,33 @@ namespace ApplicationManager.Executor
                 mainProcess.CancelErrorRead();
                 mainProcess.ErrorDataReceived -= Process_ErrorDataReceived;
 
-                _logger.LogDebug("Process was been executed.");
-
-                var mainProc = main?.Invoke();
-                if (mainProc != null)
+                var subId = await StartTaskAsync(current, after, null);
+                if (subId != new Identity())
                 {
-                    await StartTaskAsync(mainProc, after, null);
+                    id.AddChild(subId);
                 }
+
+                _logger.LogDebug("Process was been executed.");
             }, token);
+
+            id.AddChild(taskId);
+            return id;
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="process"></param>
+        private void KillProcess(Process process)
+        {
+            using (_logger.BeginScope(new { processId = process.Id }))
+            {
+                _logger.LogDebug("Killing the process...");
+                process.Kill(entireProcessTree: true);
+                process.WaitForExit();
+                _logger.LogDebug("Process was been killed.");
+            }
         }
 
 
@@ -135,11 +174,6 @@ namespace ApplicationManager.Executor
         /// <returns></returns>
         private static ProcessStartInfo GetProcessInfo(string baseDir, Downloader.Models.ApplicationExecRoot executable)
         {
-            if (executable == null)
-            {
-                return null;
-            }
-
             var args = GetArgsString(executable.Args);
             // TODO: Move to separate place with dictionary of all keys?
             args = args.Replace("{BaseDir}", baseDir);

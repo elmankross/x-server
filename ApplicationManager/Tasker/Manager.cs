@@ -1,4 +1,5 @@
-﻿using ApplicationManager.Tasker.Exceptions;
+﻿using ApplicationManager.Identifier.Models;
+using ApplicationManager.Tasker.Exceptions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
@@ -10,17 +11,19 @@ namespace ApplicationManager.Tasker
 {
     public class Manager : IDisposable
     {
-        private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _tasks;
+        private readonly ConcurrentDictionary<Identity, CancellationTokenSource> _tasks;
+        private readonly Identifier _identifier;
         private readonly ILogger _logger;
 
-        public event EventHandler<Guid> Done;
-        public event EventHandler<Guid> Failed;
+        public event EventHandler<Identity> Done;
+        public event EventHandler<Identity> Failed;
 
         public Manager(ILogger<Manager> logger, IApplicationLifetime applicationLifetime)
         {
             _logger = logger;
+            _identifier = new Identifier();
             applicationLifetime.ApplicationStopping.Register(Dispose);
-            _tasks = new ConcurrentDictionary<Guid, CancellationTokenSource>();
+            _tasks = new ConcurrentDictionary<Identity, CancellationTokenSource>();
         }
 
 
@@ -30,22 +33,24 @@ namespace ApplicationManager.Tasker
         /// <param name="action"></param>
         /// <param name="token"></param>
         /// <returns></returns>
-        internal Task<Guid> StartAsync(Action action, CancellationTokenSource token = null)
+        internal Task<Identity> StartAsync(Action action, CancellationTokenSource token = null)
         {
-            var taskId = Guid.NewGuid();
+            var id = _identifier.GetNext(e => e.Start);
             var cancellationTokenSource = token ?? new CancellationTokenSource();
-            using (_logger.BeginScope(new { taskId }))
+            using (_logger.BeginScope(id))
             {
                 _logger.LogDebug("Starting new task...");
                 var task = Task.Factory.StartNew(action,
                     cancellationTokenSource.Token,
-                    TaskCreationOptions.AttachedToParent,
+                    TaskCreationOptions.LongRunning
+                    | TaskCreationOptions.PreferFairness
+                    | TaskCreationOptions.RunContinuationsAsynchronously,
                     TaskScheduler.Default);
 
-                WrapAsync(taskId, task);
-                if (_tasks.TryAdd(taskId, cancellationTokenSource))
+                WrapAsync(id, task);
+                if (_tasks.TryAdd(id, cancellationTokenSource))
                 {
-                    return Task.FromResult(taskId);
+                    return Task.FromResult(id);
                 }
                 else
                 {
@@ -58,14 +63,14 @@ namespace ApplicationManager.Tasker
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="taskId"></param>
+        /// <param name="id"></param>
         /// <returns></returns>
-        internal Task StopAsync(Guid taskId)
+        internal Task StopAsync(Identity id)
         {
-            using (_logger.BeginScope(new { taskId }))
+            using (_logger.BeginScope(id))
             {
                 _logger.LogDebug("Stopping the task...");
-                if (_tasks.TryRemove(taskId, out var token))
+                if (_tasks.TryRemove(id, out var token))
                 {
                     token.Cancel();
                 }
@@ -80,27 +85,27 @@ namespace ApplicationManager.Tasker
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="taskId"></param>
+        /// <param name="id"></param>
         /// <param name="task"></param>
         /// <returns></returns>
-        private async Task WrapAsync(Guid taskId, Task task)
+        private async Task WrapAsync(Identity id, Task task)
         {
-            using (_logger.BeginScope(new { taskId }))
+            using (_logger.BeginScope(id))
             {
                 try
                 {
                     await task;
                     _logger.LogDebug("Task was been completed.");
-                    Done?.Invoke(this, taskId);
+                    Done?.Invoke(this, id);
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Task was been failed.");
-                    Failed?.Invoke(this, taskId);
+                    Failed?.Invoke(this, id);
                 }
                 finally
                 {
-                    if (!_tasks.TryRemove(taskId, out _))
+                    if (!_tasks.TryRemove(id, out _))
                     {
                         _logger.LogWarning("Can't remove task's link from storage.");
                     }
