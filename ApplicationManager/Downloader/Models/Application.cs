@@ -29,7 +29,6 @@ namespace ApplicationManager.Downloader.Models
         public Uri Url { get; set; }
         public string[] Dependencies { get; set; }
         public ApplicationExec Exec { get; set; }
-        public Check Check { get; set; }
 
         [JsonIgnore]
         public string BaseDirectory { get; set; }

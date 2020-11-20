@@ -4,6 +4,5 @@
     {
         string BaseDirectory { get; set; }
         ApplicationExec Exec { get; }
-        Check Check { get; }
     }
 }

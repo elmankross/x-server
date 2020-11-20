@@ -52,6 +52,7 @@ namespace ApplicationManager.Hasher
             return expectedType switch
             {
                 "md5" => new Manager(expectedHash, MD5.Create()),
+                "sha1" => new Manager(expectedHash, SHA1.Create()),
                 "sha256" => new Manager(expectedHash, SHA256.Create()),
                 "sha512" => new Manager(expectedHash, SHA512.Create()),
                 _ => throw new InvalidHashTypeException(expectedType, "Unrecognized hash type. It's not implemented yet."),

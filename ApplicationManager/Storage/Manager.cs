@@ -3,7 +3,6 @@ using ApplicationManager.Storage.Exceptions;
 using ApplicationManager.Storage.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -116,7 +115,7 @@ namespace ApplicationManager.Storage
                 {
                     if (!app.Hasher.Validate(temp))
                     {
-                        throw new InvalidApplicationSignatureException("Application has invalid signature.");
+                        _logger.LogError("Application has invalid signature.");
                     }
 
                     var appDir = baseDir.CreateSubdirectory(applicationName);
@@ -207,8 +206,8 @@ namespace ApplicationManager.Storage
             {
                 if (_applicationTasks.TryGetApplicationEvent(applicatioName, Executor.Identifier.Events.ExecuteMain, out var taskId))
                 {
-                    var innerId = taskId.Childs.Single(x => x.Type == Tasker.Identifier.Events.Start);
-                    await _executor.TerminateAsync(innerId);
+                    await _executor.TerminateAsync(taskId);
+                    _applicationTasks.Remove(applicatioName, out var _);
                 }
                 else
                 {
