@@ -5,12 +5,13 @@
     Layout = "~/Pages/Shared/_Layout.cshtml";
 }
 
-<table class="table">
+<table class="table table-borderless">
     <thead class="thead-dark">
         <tr>
             <th scope="col">Application</th>
             <th scope="col">Version</th>
-            <th scope="col">Installation</th>
+            <th scope="col">Dependencies</th>
+            <th scope="col">Storage</th>
             <th scope="col">Actions</th>
         </tr>
     </thead>
@@ -21,12 +22,20 @@
                 <td>@app.Name</td>
                 <td>@app.Version</td>
                 <td>
+                    <ul class="list-inline">
+                        @foreach (var dependency in app.Dependencies)
+                        {
+                            <li class="list-inline-item"><mark>@dependency</mark></li>
+                        }
+                    </ul>
+                </td>
+                <td>
                     <form method="post">
                         @switch (app.InstallationState)
                         {
                             case ApplicationManager.Storage.Models.InstallationState.Installed:
                                 <button type="submit"
-                                        class="btn btn-danger btn-sm"
+                                        class="btn btn-outline-danger btn-sm"
                                         asp-page-handler="uninstall"
                                         asp-route-name="@app.Name">
                                     Uninstall
@@ -37,7 +46,7 @@
                                 break;
                             case ApplicationManager.Storage.Models.InstallationState.NotInstalled:
                                 <button type="submit"
-                                        class="btn btn-primary btn-sm"
+                                        class="btn btn-outline-primary btn-sm"
                                         asp-page-handler="install"
                                         asp-route-name="@app.Name">
                                     Install
@@ -54,7 +63,7 @@
                             {
                                 case ApplicationManager.Storage.Models.ExecutionState.NotExecuted:
                                     <button type="submit"
-                                            class="btn btn-primary btn-sm"
+                                            class="btn btn-outline-primary btn-sm"
                                             asp-page-handler="run"
                                             asp-route-name="@app.Name">
                                         Run
@@ -62,14 +71,21 @@
                                     break;
                                 case ApplicationManager.Storage.Models.ExecutionState.Executing:
                                     <button type="submit"
-                                            class="btn btn-danger btn-sm"
+                                            class="btn btn-outline-danger btn-sm"
                                             asp-page-handler="terminate"
                                             asp-route-name="@app.Name">
                                         Terminate
                                     </button>
+                                    @if (app.WebUrl != null)
+                                    {
+                                        <a href="@app.WebUrl"
+                                           role="button"
+                                           target="_blank"
+                                           class="btn btn-outline-secondary btn-sm">UI</a>
+                                    }
                                     break;
-                                case ApplicationManager.Storage.Models.ExecutionState.Erorred:
-                                    <span>Errored. Check the log.</span>
+                                case ApplicationManager.Storage.Models.ExecutionState.Terminating:
+                                    <span>Terminating...</span>
                                     break;
                             }
                         }

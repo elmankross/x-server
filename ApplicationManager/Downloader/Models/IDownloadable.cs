@@ -5,7 +5,7 @@ namespace ApplicationManager.Downloader.Models
     public interface IDownloadable
     {
         string Hash { get; }
-        Uri Url { get; }
+        Uri DownloadUrl { get; }
         string[] Dependencies { get; }
     }
 }

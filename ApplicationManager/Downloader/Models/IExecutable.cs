@@ -2,7 +2,6 @@
 {
     public interface IExecutable
     {
-        string BaseDirectory { get; set; }
         ApplicationExec Exec { get; }
     }
 }

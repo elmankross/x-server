@@ -11,7 +11,7 @@ namespace ApplicationManager.Downloader
 {
     public class Manager
     {
-        public IEnumerable<ApplicationInfo> Applications => _applications;
+        public IReadOnlyCollection<Application> Applications => _applications;
 
         private readonly Applications _applications;
         private readonly ILogger _logger;
@@ -49,7 +49,7 @@ namespace ApplicationManager.Downloader
                 }
 
                 var application = _applications.Dictionary[applicationName];
-                var request = WebRequest.CreateHttp(application.Url);
+                var request = WebRequest.CreateHttp(application.DownloadUrl);
 
                 _logger.LogDebug("Calling the resource to download the file...");
 

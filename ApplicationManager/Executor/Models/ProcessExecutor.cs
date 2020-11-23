@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -7,26 +6,17 @@ namespace ApplicationManager.Executor.Models
 {
     internal class ProcessExecutor : Executor
     {
-        protected virtual char ArgKeyPrefix { get; } = '-';
-        protected virtual char ArgValPrefix { get; } = ' ';
-
         private readonly ProcessStartInfo _info;
         private Process _process;
 
         internal ProcessExecutor(
             CancellationToken cancellationToken,
             Downloader.Models.ApplicationExecRoot executable,
-            string appBaseDirectory)
-            : base(cancellationToken)
+            Storage.Models.StorageEnv env)
+            : base(cancellationToken, env)
         {
-            var args = GetArgsString(executable.Args);
-            // TODO: Move to separate place with dictionary of all keys?
-            args = args.Replace("{BaseDir}", appBaseDirectory);
-            var command = executable.Binary.Replace("{BaseDir}", appBaseDirectory);
             _info = new ProcessStartInfo
             {
-                FileName = command,
-                Arguments = args,
                 ErrorDialog = false,
                 RedirectStandardError = true,
                 RedirectStandardOutput = true,
@@ -34,6 +24,25 @@ namespace ApplicationManager.Executor.Models
                 CreateNoWindow = true,
                 WindowStyle = ProcessWindowStyle.Hidden
             };
+
+            var args = ReplaceWithEnvironment(executable.Args.ToString());
+            var command = ReplaceWithEnvironment(executable.Binary);
+
+            foreach (var e in executable.Env)
+            {
+                var enValue = ReplaceWithEnvironment(e.Value);
+                // FIXME: OMG! I am so sowwy(((
+                foreach(var e1 in executable.Env)
+                {
+                    enValue = enValue.Replace(e1.Key, e1.Value);
+                }
+                _info.Environment.Add(e.Key, enValue);
+                command = command.Replace(e.Key, e.Value);
+                args = args.Replace(e.Key, e.Value);
+            }
+
+            _info.FileName = command;
+            _info.Arguments = args;
         }
 
 
@@ -93,35 +102,6 @@ namespace ApplicationManager.Executor.Models
         {
             PushError(e.Data);
         }
-
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="args"></param>
-        /// <returns></returns>
-        private string GetArgsString(Downloader.Models.ApplicationExecArgs args)
-        {
-            if (args == null)
-            {
-                return string.Empty;
-            }
-
-            var sb = new StringBuilder();
-            foreach (var arg in args)
-            {
-                sb.Append(ArgKeyPrefix).Append(arg.Key);
-                if (!string.IsNullOrEmpty(arg.Value))
-                {
-                    sb.Append(ArgValPrefix).Append(arg.Value);
-                }
-                sb.Append(' ');
-            }
-            var result = sb.ToString();
-            sb.Clear();
-            return result;
-        }
-
 
         /// <summary>
         /// 

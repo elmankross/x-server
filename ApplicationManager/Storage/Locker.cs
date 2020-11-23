@@ -47,10 +47,9 @@ namespace ApplicationManager.Storage
         /// <returns></returns>
         internal async Task LockAsync(Identity id, Downloader.Models.IDisplayable info, InstallationState state)
         {
-            Applications.AddOrUpdate(info.Name, _ => new ApplicationLock(id.Number, info)
-            {
-                InstallationState = state
-            }, (_, item) => { item.InstallationState = state; return item; });
+            Applications.AddOrUpdate(info.Name,
+                (_) => new ApplicationLock(id.Number, info) { InstallationState = state },
+                (_, item) => { item.InstallationState = state; return item; });
 
             await WriteAsync();
         }

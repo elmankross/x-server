@@ -5,13 +5,12 @@ namespace ApplicationManager.Executor.Models
     internal class CmdExecutor : ProcessExecutor
     {
         internal const string COMMAND_PREFIX = ":cmd";
-        protected override char ArgKeyPrefix { get; } = '/';
 
         internal CmdExecutor(
             CancellationToken cancellationToken,
             Downloader.Models.ApplicationExecRoot executable,
-            string appBaseDirectory)
-            : base(cancellationToken, OverrideExecutable(executable), appBaseDirectory)
+            Storage.Models.StorageEnv env)
+            : base(cancellationToken, OverrideExecutable(executable), env)
         {
 
         }

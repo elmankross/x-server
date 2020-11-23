@@ -18,11 +18,10 @@ namespace ApplicationManager.Tasker
         public event EventHandler<Identity> Done;
         public event EventHandler<Identity> Failed;
 
-        public Manager(ILogger<Manager> logger, IApplicationLifetime applicationLifetime)
+        public Manager(ILogger<Manager> logger)
         {
             _logger = logger;
             _identifier = new Identifier();
-            applicationLifetime.ApplicationStopping.Register(Dispose);
             _tasks = new ConcurrentDictionary<Identity, CancellationTokenSource>();
         }
 

@@ -7,15 +7,17 @@ namespace ApplicationManager.Executor.Models
     internal abstract class Executor : IDisposable
     {
         protected readonly CancellationToken CancellationToken;
+        protected readonly Storage.Models.StorageEnv Environment;
 
         internal event EventHandler<string> OnMessage;
         internal event EventHandler<string> OnError;
         internal event EventHandler OnExited;
 
 
-        protected Executor(CancellationToken cancellationToken)
+        protected Executor(CancellationToken cancellationToken, Storage.Models.StorageEnv env)
         {
             CancellationToken = cancellationToken;
+            Environment = env;
         }
 
 
@@ -25,14 +27,13 @@ namespace ApplicationManager.Executor.Models
         /// <returns></returns>
         internal static Executor Get(CancellationToken cancellationToken,
             Downloader.Models.ApplicationExecRoot executable,
-            string appBaseDirectory)
+            Storage.Models.StorageEnv env)
         {
-            if (executable.Binary == CmdExecutor.COMMAND_PREFIX)
+            return executable.Binary switch
             {
-                return new CmdExecutor(cancellationToken, executable, appBaseDirectory);
-            }
-
-            return new ProcessExecutor(cancellationToken, executable, appBaseDirectory);
+                CmdExecutor.COMMAND_PREFIX => new CmdExecutor(cancellationToken, executable, env),
+                _ => new ProcessExecutor(cancellationToken, executable, env),
+            };
         }
 
 
@@ -81,6 +82,26 @@ namespace ApplicationManager.Executor.Models
         protected void PushExited()
         {
             OnExited?.Invoke(this, null);
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        protected string ReplaceWithEnvironment(string source)
+        {
+            if ((source?.Length ?? 0) == 0)
+            {
+                return source;
+            }
+
+            foreach (var env in Environment)
+            {
+                source = source.Replace(env.Key, env.Value);
+            }
+
+            return source;
         }
 
 

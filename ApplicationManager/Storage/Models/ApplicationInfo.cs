@@ -1,13 +1,20 @@
-﻿using System.Text.Json.Serialization;
+﻿using System;
+using System.Text.Json.Serialization;
 
 namespace ApplicationManager.Storage.Models
 {
     public class ApplicationInfo : Downloader.Models.ApplicationInfo
     {
+        [JsonIgnore]
+        public string[] Dependencies { get; internal set; }
+
+        [JsonIgnore]
+        public Uri WebUrl { get; internal set; }
+
         [JsonInclude]
         public InstallationState InstallationState { get; internal set; }
 
-        [JsonInclude]
+        [JsonIgnore]
         public ExecutionState ExecutionState { get; internal set; }
 
         [JsonConstructor]
@@ -32,6 +39,6 @@ namespace ApplicationManager.Storage.Models
     {
         NotExecuted,
         Executing,
-        Erorred
+        Terminating
     }
 }
