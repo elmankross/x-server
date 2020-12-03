@@ -23,7 +23,7 @@ namespace ApplicationManager.Executor
         /// </summary>
         /// <param name="logger"></param>
         /// <param name="tasker"></param>
-        public Manager(ILogger<Manager> logger, Tasker.Manager tasker)
+        public Manager(ILogger<Manager> logger, Tasker.Manager<Manager> tasker)
         {
             _logger = logger;
             _tasker = tasker;
@@ -159,7 +159,7 @@ namespace ApplicationManager.Executor
             {
                 _logger.LogDebug("Application was been exited.");
                 Exited?.Invoke(this, id);
-            }
+           }
         }
 
 

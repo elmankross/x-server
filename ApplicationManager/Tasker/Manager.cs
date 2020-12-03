@@ -1,6 +1,5 @@
 ﻿using ApplicationManager.Identifier.Models;
 using ApplicationManager.Tasker.Exceptions;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
@@ -9,7 +8,20 @@ using System.Threading.Tasks;
 
 namespace ApplicationManager.Tasker
 {
-    public class Manager : IDisposable
+    /// <summary>
+    /// Derives for different contexts
+    /// </summary>
+    /// <typeparam name="TContext"></typeparam>
+    public class Manager<TContext> : Manager
+    {
+        public Manager(ILogger<Manager<TContext>> logger)
+            :base(logger)
+        {
+        }
+    }
+
+
+    public abstract class Manager : IDisposable
     {
         private readonly ConcurrentDictionary<Identity, CancellationTokenSource> _tasks;
         private readonly Identifier _identifier;

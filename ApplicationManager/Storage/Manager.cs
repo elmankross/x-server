@@ -32,7 +32,7 @@ namespace ApplicationManager.Storage
             ILogger<Manager> logger,
             Downloader.Manager downloader,
             Executor.Manager executor,
-            Tasker.Manager tasker)
+            Tasker.Manager<Manager> tasker)
         {
             _configuration = configuration.Value;
             _env = new StorageEnv()
@@ -273,7 +273,7 @@ namespace ApplicationManager.Storage
                     _applicationTasks.TryRemove(key, out var _);
                     parentId.NewChildren -= OnId_NewChild;
                 }
-            }
+           }
         }
 
 

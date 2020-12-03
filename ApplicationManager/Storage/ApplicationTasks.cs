@@ -27,6 +27,6 @@ namespace ApplicationManager.Storage
 
             key = found.Key;
             return true;
-        }
+       }
     }
 }

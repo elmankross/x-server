@@ -23,6 +23,17 @@
                         </li>
                     </ul>
                 </div>
+                <div class="dropdown">
+                    <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownRefreshTime" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Refresh every (None)
+                    </button>
+                    <div class="dropdown-menu" aria-labelledby="dropdownRefreshTime">
+                        <a class="dropdown-item" onClick="setAutoRefresh(-1)">None</a>
+                        <a class="dropdown-item" onClick="setAutoRefresh(5000)">5s</a>
+                        <a class="dropdown-item" onClick="setAutoRefresh(10000)">10s</a>
+                        <a class="dropdown-item" onClick="setAutoRefresh(15000)">15s</a>
+                    </div>
+                </div>
             </div>
         </nav>
     </header>

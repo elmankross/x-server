@@ -10,7 +10,8 @@ namespace X_Server.Extensions
             services.Configure<ApplicationManager.Storage.Configuration>(x => config.Bind("Storage", x));
             services.Configure<ApplicationManager.Downloader.Models.Applications>(x => config.Bind("Storage:Applications", x));
 
-            services.AddSingleton<ApplicationManager.Tasker.Manager>();
+
+            services.AddSingleton(typeof(ApplicationManager.Tasker.Manager<>));
             services.AddSingleton<ApplicationManager.Downloader.Manager>();
             services.AddSingleton<ApplicationManager.Executor.Manager>();
             services.AddSingleton<ApplicationManager.Storage.Manager>();
